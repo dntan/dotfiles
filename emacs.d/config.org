@@ -1,0 +1,219 @@
+#+title: Danny's emacs config
+#+Author: Danny Tan
+#+Description: an emacs config for exploring emac packages.
+
+
+* Danny's emacs config
+
+This is my first attempt to write my emacs config as an org file.
+
+Something handy for myself
+C-c C-,
+brings up a menu to insert a source code block. this is better than typing it out.
+This is a standard gnu emacs keybinding
+we can use this if we did not turn on (org
+** Package Manager
+
+#+begin_src emacs-lisp
+
+  ;; Initialize package sources
+  (require 'package)
+
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
+			   ("org" . "https://orgmode.org/elpa/")
+			   ("elpa" . "https://elpa.gnu.org/packages/")))
+
+  (package-initialize)
+  (unless package-archive-contents
+   (package-refresh-contents))
+
+  ;; Initialize use-package on non-Linux platforms
+  (unless (package-installed-p 'use-package)
+     (package-install 'use-package))
+
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+
+#+end_src
+
+
+** Basics
+*** GUI preferences.
+
+#+begin_src emacs-lisp
+
+             ;;This is Danny's emacs config file as init.el
+
+             (setq inhibit-startup-message t)
+
+             (scroll-bar-mode -1)        ; Disable visible scrollbar
+             (tool-bar-mode -1)          ; Disable the toolbar
+             (tooltip-mode -1)           ; Disable tooltips
+             (set-fringe-mode 10)        ; Give some breathing room
+
+             (menu-bar-mode -1)            ; Disable the menu bar
+
+             (savehist-mode +1)
+             (setq savehist-additional-variables '(kill-ring search-ring regexp-search-ring))
+
+             ;; Set up the visible bell
+             (setq visible-bell t)
+
+  (column-number-mode)
+
+  ;; trying out relative line numbers in the emacsclient
+
+  (setq display-line-numbers-type 'relative)
+  (global-display-line-numbers-mode)
+
+  ;; Disable line numbers for some modes
+         (dolist (mode '(
+                         term-mode-hook
+                         eshell-mode-hook))
+           (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+  ;; word wrap in buffers 
+  (global-visual-line-mode 1)
+#+end_src
+
+** Backups
+
+#+begin_src emacs-lisp
+
+  (setq backup-directory-alist '(("." . "~/.emacs.d/backups"))) ;; This is helpful to keep files neat and backups all in one centralised place
+  (setq delete-old-versions -1)
+  (setq version-control t)
+  (setq vc-make-backup-files t)
+  (setq auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-save-list/" t)))
+
+#+end_src
+
+** Fonts
+
+#+begin_src emacs-lisp
+
+  (set-face-attribute 'default nil :font "DejaVu Sans" :height 130)
+  
+#+end_src
+
+** EVIL
+
+#+begin_src emacs-lisp
+
+    ;; Download Evil
+    (unless (package-installed-p 'evil)
+      (package-install 'evil))
+
+    (setq evil-want-keybinding nil)  
+    ;; Enable Evil
+    (require 'evil)
+    (evil-mode 1)
+    
+  (use-package evil-collection
+    :ensure t
+    :after evil
+    :init
+    (evil-collection-init))
+#+end_src
+
+
+** General keybindings
+Need package manager. then I can set custom keybindings here.
+
+#+begin_src emacs-lisp
+  ;;some elisp code go here
+#+end_src
+
+** Org mode and LaTeX
+For all personal configs related to org-mode, org-agenda and LaTeX
+
+*** Org-Agenda
+
+User story:
+As a emacs user I want to be able to schedule TODO tasks on multiple org files in a given directory so that
+I can view all my tasks globally in one location with org-agenda.
+
+#+begin_src emacs-lisp
+
+  (setq org-agenda-files
+          '("~/Documents/tasks.org"))
+
+#+end_src
+
+*** Org-toc
+Consider using toc-org via use package. 
+
+*** Org-tempo
+
+#+begin_src emacs-lisp
+
+  (require 'org-tempo) ;;this orgmode feature is a must <s tab brings up a src code block!
+  
+#+end_src
+
+*** Org bullets
+Get Nicer bullets! needs package manager.
+
+#+begin_src emacs-lisp
+  (add-hook 'org-mode-hook 'org-indent-mode)
+  (use-package org-bullets)
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+
+  ;; Collapse headers
+
+  (setq org-ellipsis " ▾")
+#+end_src
+
+*** Org-LaTeX
+
+This settings scales up the LaTeX preview renders within an org file, so that its easier to read.
+
+#+begin_src emacs-lisp
+  
+(setq org-format-latex-options (plist-put org-format-latex-options :scale 2.5))
+#+end_src
+** Magit
+Magit is a user friendly interface for git source control tool.
+
+
+#+begin_src emacs-lisp
+  (use-package magit
+  :ensure t)
+#+end_src
+
+** Shells
+*** eshell
+can config eshell profile and alises.
+eshell is already a part of gnu emacs.
+
+*** vterm
+need use-package to run vterm
+Can set vterm to run bash, zsh, fish etc.
+
+** Themes
+
+#+begin_src emacs-lisp
+
+ (load-theme 'tango-dark)
+
+#+end_src
+
+** Transparency
+#+begin_src emacs-lisp
+
+  (add-to-list 'default-frame-alist '(alpha-background . 90)) ; For all new frames henceforth
+
+#+end_src
+
+** Which-Key
+
+Get Which-Key it is a useful package for reminding us what keybindings do what.
+#+begin_src emacs-lisp
+
+  (use-package which-key
+  :init (which-key-mode)
+  :diminish which-key-mode
+  :config
+  (setq which-key-idle-delay 0.3))
+
+#+end_src
