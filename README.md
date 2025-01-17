@@ -2,11 +2,12 @@
 This repo is for my personal config files when working on arch based systems.
 
 ## Getting started:
-install git
-`git clone this repo`
+1. install git
+2. `git clone this repo`
 
-### Emacs on Arch (xfce4)
+### Personal Emacs on Arch (xfce4)
 Install and config emacs:
-1. Install vanilla emacs
-2. Set caps-lock to CTRL
+1. Set caps-lock to CTRL
+2. Install vanilla emacs
 3. Copy emacs.d folder from repo to `~/.config/
+4. Set up Emacs Daemon on startup
