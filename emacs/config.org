@@ -80,11 +80,11 @@ we can use this if we did not turn on (org
 
 #+begin_src emacs-lisp
 
-  (setq backup-directory-alist '(("." . "~/.emacs.d/backups"))) ;; This is helpful to keep files neat and backups all in one centralised place
+  (setq backup-directory-alist '(("." . "~/.config/emacs/backups"))) ;; This is helpful to keep files neat and backups all in one centralised place
   (setq delete-old-versions -1)
   (setq version-control t)
   (setq vc-make-backup-files t)
-  (setq auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-save-list/" t)))
+  (setq auto-save-file-name-transforms '((".*" "~/.config/emacs/auto-save-list/" t)))
 
 #+end_src
 

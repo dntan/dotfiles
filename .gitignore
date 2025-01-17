@@ -1,6 +1,6 @@
-emacs.d/auto-save-list/
-emacs.d/backups/
-emacs.d/eshell/
-emacs.d/history
-emacs.d/transient/
-emacs.d/elpa
+emacs/auto-save-list/
+emacs/backups/
+emacs/eshell/
+emacs/history
+emacs/transient/
+emacs/elpa
