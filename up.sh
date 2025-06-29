@@ -53,7 +53,7 @@ read input
 
 git commit -m "$input"
 
-# Push the local files to github
+# Push the local files to github, if you are getting a src refspec error... its either main or master!
 
 git push -u origin master
 #git push -u origin main --force

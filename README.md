@@ -11,3 +11,9 @@ Install and config emacs:
 2. Install vanilla emacs
 3. Copy emacs.d folder from repo to `~/.config/
 4. Set up Emacs Daemon on startup
+
+### dotfiles emacs for windows
+1. Creating a copy of an init file for emacs on windows.
+2. Install git on windows from the website
+3. Set up SSH and GPG keys / Add them to github account.
+3. Install Magit!
