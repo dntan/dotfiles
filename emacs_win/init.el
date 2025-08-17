@@ -17,10 +17,10 @@
 (setq inhibit-startup-screen t)
 
 ;; Set the default dir
-(setq default-directory "C:/User/Danny")
+(setq default-directory "C:/Users/Danny")
 
 ;;Package dir
-(add-to-list 'load-path' "C:/User/Danny/.emacs.d/packages")
+(add-to-list 'load-path' "C:/Users/Danny/.emacs.d/packages")
 
 
 ;; Initialize package sources
@@ -46,7 +46,7 @@
 (tool-bar-mode -1)
 (menu-bar-mode -1)
 (scroll-bar-mode -1)
-(blink-cursor-mode -1)
+(blink-cursor-mode 1)
 (column-number-mode +1)
 (global-goto-address-mode +1)
 (global-visual-line-mode +1) ;; This is usually what I want to happen! -------------------------->
@@ -128,9 +128,19 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
-   '("8c7e832be864674c220f9a9361c851917a93f921fedb7717b1b5ece47690c098"
+   '("8d3ef5ff6273f2a552152c7febc40eabca26bae05bd12bc85062e2dc224cde9a"
+     "5c8a1b64431e03387348270f50470f64e28dfae0084d33108c33a81c1e126ad6"
+     "9d5124bef86c2348d7d4774ca384ae7b6027ff7f6eb3c401378e298ce605f83a"
+     "87fa3605a6501f9b90d337ed4d832213155e3a2e36a512984f83e847102a42f4"
+     "e8bd9bbf6506afca133125b0be48b1f033b1c8647c628652ab7a2fe065c10ef0"
+     "5244ba0273a952a536e07abaad1fdf7c90d7ebb3647f36269c23bfd1cf20b0b8"
+     "dfcd2b13f10da4e5e26eb1281611e43a134d4400b06661445e7cbb183c47d2ec"
+     "8c7e832be864674c220f9a9361c851917a93f921fedb7717b1b5ece47690c098"
      default))
- '(package-selected-packages '(doom-themes magit org-bullets sicp)))
+ '(package-selected-packages
+   '(auctex company company-box doom-themes geiser-racket lsp-mode magit
+	    org-bullets racket-mode rainbow-delimiters sicp
+	    smartparens yasnippet yasnippet-snippets)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -140,6 +150,7 @@
 
 
 ;; Loading in a dark theme.
+;; review the themes here https://github.com/doomemacs/themes/tree/screenshots
 (use-package doom-themes
   :ensure t
   :config
@@ -151,12 +162,19 @@
 
 ;; (add-to-list 'default-frame-alist '(alpha-background . 90)) ;; doesn't work on windows.
 
-;; requirements for programming in orgmode
+;; SICP Racket specific:
+;; download the ob-racket package manually from github as it doesn't exist on melpa
 
+(require 'ob-racket)
+
+;; requirements for programming in orgmode
 
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((python . t)))   ;; Python support using python-shell-interpreter
+ '((python . t)
+   (scheme . t)
+   (C . t)
+   (racket . t)))   ;; Python support using python-shell-interpreter
 
 ;; More org-babel stuff, making it better to work with python:
 (setq org-babel-default-header-args:python '((:results . "output")))
@@ -171,3 +189,109 @@
 (setq org-confirm-babel-evaluate #'my-org-confirm-babel-evaluate)
 
 
+;; Language Servers
+(use-package lsp-mode
+  :commands (lsp lsp--buffer-deferred)
+  :init
+  (setq lsp-keymap-prefix "C-c l")
+  :config
+  (lsp-enable-which-key-integration t))
+
+;; Following advice from emacs elements I'm going to try out company mode first...
+
+(use-package company
+    :ensure t
+    :hook ((prog-mode . company-mode))
+    :bind (:map company-active-map
+                ("<return>" . nil)
+                ("RET" . nil)
+                ("C-<return>" . company-complete-selection)
+                ([tab] . company-complete-selection)
+                ("TAB" . company-complete-selection)))
+  (use-package company-box
+    :ensure t
+    :hook (company-mode . company-box-mode))
+(add-hook 'after-init-hook 'global-company-mode)
+(setq company-idle-delay 0.2)
+(setq company-minimum-prefix-length 1)
+(setq company-tooltip-align-annotations t)
+
+;; ;; Language support:
+(add-hook 'python-mode-hook #'lsp)
+;; (add-hook 'c-mode-hook 'company-mode)
+;; (add-hook 'scheme-mode-hook 'company-mode)
+;; (add-hook 'geiser-repl-mode-hook 'company-mode)
+(add-hook 'emacs-lisp-mode-hook 'company-mode)
+(add-hook 'org-mode-hook 'company-mode)
+;; for orgmode as it has not backend
+(setq company-backends '((company-capf company-dabbrev)))
+
+;; lsp-mode:
+(require 'lsp-ui)
+(add-hook 'lsp-mode-hook 'lsp-ui-mode)
+(setq lsp-enable-symbol-highlighting t
+      lsp-ui-sideline-show-hover t
+      lsp-ui-doc-enable t)
+
+
+;; Scheme Racket REPL
+(require 'geiser-racket)
+
+;; pairs of parens
+(use-package smartparens
+  :ensure smartparens  ;; install the package
+  :hook (prog-mode text-mode markdown-mode) ;; add `smartparens-mode` to these hooks
+  :config
+  ;; load default config
+  (require 'smartparens-config))
+(add-hook 'geiser-repl-mode-hook #'smartparens-mode)
+
+;; rainbow-delimiters colours based on nesting.
+(use-package rainbow-delimiters
+  :ensure t
+  :hook ((prog-mode . rainbow-delimiters-mode)
+         (geiser-repl-mode . rainbow-delimiters-mode)))
+
+;; A world of LaTeX with AUCTeX
+
+(use-package auctex
+  :ensure t)
+
+;; From Karthinks site.. lets try that out.
+(setq org-preview-latex-default-process 'dvisvgm)
+(defun my/text-scale-adjust-latex-previews ()
+  "Adjust the size of latex preview fragments when changing the
+buffer's text scale."
+  (pcase major-mode
+    ('latex-mode
+     (dolist (ov (overlays-in (point-min) (point-max)))
+       (if (eq (overlay-get ov 'category)
+               'preview-overlay)
+           (my/text-scale--resize-fragment ov))))
+    ('org-mode
+     (dolist (ov (overlays-in (point-min) (point-max)))
+       (if (eq (overlay-get ov 'org-overlay-type)
+               'org-latex-overlay)
+           (my/text-scale--resize-fragment ov))))))
+
+(defun my/text-scale--resize-fragment (ov)
+  (overlay-put
+   ov 'display
+   (cons 'image
+         (plist-put
+          (cdr (overlay-get ov 'display))
+          :scale (+ 1.0 (* 0.25 text-scale-mode-amount))))))
+
+(add-hook 'text-scale-mode-hook #'my/text-scale-adjust-latex-previews)
+
+;; LaTeX fragments in org files: Make them large.
+
+(add-hook 'org-mode-hook
+          (lambda ()
+            (setq org-format-latex-options
+                  '(:foreground default :background default :scale 1.6
+                    :html-foreground "Black" :html-background "Transparent"
+                    :html-scale 1.0 :matchers ("begin" "$1" "$" "$$" "\\(" "\
+
+\[")))
+            (org-latex-preview)))
