@@ -116,12 +116,16 @@
 
 (setq org-ellipsis " ▾")
 
-;; Try to use which-key?
-(use-package which-key
-:init (which-key-mode)
-:diminish which-key-mode
-:config
-(setq which-key-idle-delay 0.3))
+;; Try to use which-key?  This is already a part of emacs30, read emacs news to find out more.
+;; (use-package which-key
+;; :init (which-key-mode)
+;; :diminish which-key-mode
+;; :config
+;; (setq which-key-idle-delay 0.3))
+
+
+;; Themes for emacs
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
