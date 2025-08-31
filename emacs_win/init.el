@@ -1,4 +1,5 @@
-;; Dannys windows basics config
+;; Dannys windows basic config
+;; UPDATE 31/08/25
 
 ;; Set default zoom to 128
 
@@ -7,7 +8,6 @@
 ;; Save find history
 (savehist-mode +1)
 (setq savehist-additional-variables '(kill-ring search ring regexp-search-ring))
-
 
 ;; Set custom text to the scratch buffer
 (setq initial-scratch-message
@@ -21,7 +21,6 @@
 
 ;;Package dir
 (add-to-list 'load-path' "C:/Users/Danny/.emacs.d/packages")
-
 
 ;; Initialize package sources
 (require 'package)
@@ -41,7 +40,6 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
-
 ;; minimal basics emacs, all optional
 (tool-bar-mode -1)
 (menu-bar-mode -1)
@@ -58,7 +56,6 @@
 (global-set-key "\C-x\ \C-r" 'recentf-open-files) ;;C-x C-r, q to quit.
 (global-hl-line-mode 1)
 (fset 'yes-or-no-p 'y-or-n-p)
-
 
 ;; UTF-8
 (set-language-environment "UTF-8")
@@ -81,7 +78,6 @@
       (find-file "~/.emacs.d")))
 
 ;; Global keys, Trying out emacs elements suggestions see how it goes.
-
 (setq recenter-positions '(top middle bottom))
 ;;(global-set-key (kbd "C-1") 'kill-this-buffer) ;;This did not seem to work.
 (global-set-key (kbd "C-<down>") (kbd "C-u 1 C-v"))
@@ -95,17 +91,21 @@
 
 ;; dired
 (setq dired-listing-switches "-alt --dired --group-directories-first -h -G")
-
 (add-hook 'dired-mode-hook 'dired-hide-details-mode)
-
 (add-hook 'dired-mode-hook (lambda () (dired-omit-mode)))
 
 ;; I-search
 (setq case-fold-search t) ;; C-s for I search in document. case-insensitive.
-
 (setq sentence-end-double-space nil)
 
-;; org-mode
+;; THEMES
+;; review the themes here https://github.com/doomemacs/themes/tree/screenshots
+(use-package doom-themes
+  :ensure t
+  :config
+  (load-theme 'doom-dracula t))
+
+;;ORGMODE
 
 (require 'org-tempo)
 (add-hook 'org-mode-hook 'org-indent-mode)
@@ -113,18 +113,14 @@
 (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
 
 ;; Collapse headers
-
 (setq org-ellipsis " ▾")
 
-;; Try to use which-key?  This is already a part of emacs30, read emacs news to find out more.
-;; (use-package which-key
-;; :init (which-key-mode)
-;; :diminish which-key-mode
-;; :config
-;; (setq which-key-idle-delay 0.3))
-
-
-;; Themes for emacs
+;; which-key, when you hit a keychord it shows you options.
+(use-package which-key
+:init (which-key-mode)
+:diminish which-key-mode
+:config
+(setq which-key-idle-delay 0.3))
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -152,25 +148,6 @@
  ;; If there is more than one, they won't work right.
  )
 
-
-;; Loading in a dark theme.
-;; review the themes here https://github.com/doomemacs/themes/tree/screenshots
-(use-package doom-themes
-  :ensure t
-  :config
-  (load-theme 'doom-dracula t))
-
-;;(load-theme 'tango-dark)
-
-;;What about transparency
-
-;; (add-to-list 'default-frame-alist '(alpha-background . 90)) ;; doesn't work on windows.
-
-;; SICP Racket specific:
-;; download the ob-racket package manually from github as it doesn't exist on melpa
-
-(require 'ob-racket)
-
 ;; requirements for programming in orgmode
 
 (org-babel-do-load-languages
@@ -182,18 +159,16 @@
 
 ;; More org-babel stuff, making it better to work with python:
 (setq org-babel-default-header-args:python '((:results . "output")))
-
 (global-set-key (kbd "C-c p s") #'run-python)
 
-
 ;;  ignore the prompt when eval some source code blocks
-
 (defun my-org-confirm-babel-evaluate (lang body)
   (not (string= lang "python")))  ;don't ask for ditaa
 (setq org-confirm-babel-evaluate #'my-org-confirm-babel-evaluate)
 
 
-;; Language Servers
+;; PROGRAMMING
+;;Language Servers
 (use-package lsp-mode
   :commands (lsp lsp--buffer-deferred)
   :init
@@ -237,6 +212,8 @@
       lsp-ui-sideline-show-hover t
       lsp-ui-doc-enable t)
 
+;; SICP Racket specific:
+(require 'ob-racket)
 
 ;; Scheme Racket REPL
 (require 'geiser-racket)
@@ -255,6 +232,7 @@
   :ensure t
   :hook ((prog-mode . rainbow-delimiters-mode)
          (geiser-repl-mode . rainbow-delimiters-mode)))
+
 
 ;; A world of LaTeX with AUCTeX
 
