@@ -1,5 +1,5 @@
 ;; Dannys windows basic config
-;; UPDATE 31/08/25
+;; UPDATE 4/10/25
 
 ;; Set default zoom to 128
 
@@ -138,9 +138,9 @@
      "8c7e832be864674c220f9a9361c851917a93f921fedb7717b1b5ece47690c098"
      default))
  '(package-selected-packages
-   '(auctex company company-box doom-themes geiser-racket lsp-mode magit
-	    org-bullets racket-mode rainbow-delimiters sicp
-	    smartparens yasnippet yasnippet-snippets)))
+   '(auctex cdlatex company-box doom-themes geiser-racket lsp-ui magit
+	    org-bullets org-roam org-table preview racket-mode
+	    rainbow-delimiters sicp smartparens yasnippet-snippets)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -165,6 +165,54 @@
 (defun my-org-confirm-babel-evaluate (lang body)
   (not (string= lang "python")))  ;don't ask for ditaa
 (setq org-confirm-babel-evaluate #'my-org-confirm-babel-evaluate)
+
+;; ORG-ROAM, Second brain
+;; This is for a zettlekasten approach to notetaking
+;; I have ideas of running a ML algo on my org-roam-directory, to auto add tags and backlinks
+
+(use-package org-roam
+  :ensure t
+  :init
+  (setq org-roam-directory (file-truename "~/dt_2b"))
+  :custom
+  (org-roam-capture-templates
+   '(("w" "Website" plain
+      "* Notes\n** Fleeting notes\n%?\n\n* Suggested backlinks\n:BEGIN_AUTOBACKLINKS:\n:END_AUTOBACKLINKS:\n"
+      :if-new (file+head "websites/${slug}.org"
+                         "#+title: ${title}\n#+filetags: :website:\n#+created: %U\n\n- Source: ${url}\n")
+      :unnarrowed t)
+
+     ("y" "YouTube" plain
+      "* Notes\n** Fleeting notes\n%?\n\n* Suggested backlinks\n:BEGIN_AUTOBACKLINKS:\n:END_AUTOBACKLINKS:\n"
+      :if-new (file+head "youtube/${slug}.org"
+                         "#+title: ${title}\n#+filetags: :youtube:video:\n#+created: %U\n\n- URL: ${url}\n")
+      :unnarrowed t)
+
+     ("z" "Zotero PDF" plain
+      "* Reference Notes\n** Fleeting notes\n%?\n\n* Suggested backlinks\n:BEGIN_AUTOBACKLINKS:\n:END_AUTOBACKLINKS:\n"
+      :if-new (file+head "zotero/${citekey}.org"
+                         "#+title: ${title}\n#+filetags: :zotero:pdf:article:\n#+created: %U\n\n- Citation: [cite:@${citekey}]\n- PDF: ${file}\n")
+      :unnarrowed t)))
+
+  (org-roam-dailies-capture-templates
+ '(("d" "default" entry
+    "* Daily notes\n%?\n\n* Suggested backlinks\n:BEGIN_AUTOBACKLINKS:\n:END_AUTOBACKLINKS:\n"
+    :if-new (file+head "%<%Y-%m-%d>.org"
+                       "#+title: %<%Y-%m-%d>\n#+created: %U\n"))))
+
+
+
+  (org-roam-completion-everywhere t)
+  :bind (("C-c n f" . org-roam-node-find)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n g" . org-roam-graph)
+         ("C-c n c" . org-roam-capture)
+         ("C-c n d" . org-roam-dailies-goto-today))
+  :config
+  (org-roam-db-autosync-mode))
+
+
+;; Need to set up capture templates here, so that I can save time creating templates from scratch.
 
 
 ;; PROGRAMMING
@@ -234,13 +282,109 @@
          (geiser-repl-mode . rainbow-delimiters-mode)))
 
 
-;; A world of LaTeX with AUCTeX
+; A world of LaTeX with AUCTeX
 
-(use-package auctex
-  :ensure t)
+;; AucTeX settings - almost no changes
+(use-package latex
+  :ensure auctex
+  :hook ((LaTeX-mode . prettify-symbols-mode))
+  :bind (:map LaTeX-mode-map
+         ("C-S-e" . latex-math-from-calc))
+  :config
+  ;; Format math as a Latex string with Calc
+  (defun latex-math-from-calc ()
+    "Evaluate `calc' on the contents of line at point."
+    (interactive)
+    (cond ((region-active-p)
+           (let* ((beg (region-beginning))
+                  (end (region-end))
+                  (string (buffer-substring-no-properties beg end)))
+             (kill-region beg end)
+             (insert (calc-eval `(,string calc-language latex
+                                          calc-prefer-frac t
+                                          calc-angle-mode rad)))))
+          (t (let ((l (thing-at-point 'line)))
+               (end-of-line 1) (kill-line 0) 
+               (insert (calc-eval `(,l
+                                    calc-language latex
+                                    calc-prefer-frac t
+                                    calc-angle-mode rad))))))))
 
-;; From Karthinks site.. lets try that out.
+;; CDLatex settings
+(use-package cdlatex
+  :ensure t
+  :hook (LaTeX-mode . turn-on-cdlatex)
+  :bind (:map cdlatex-mode-map 
+              ("<tab>" . cdlatex-tab)))
+
+;; Yasnippet settings
+(use-package yasnippet
+  :ensure t
+  :hook ((LaTeX-mode . yas-minor-mode)
+         (post-self-insert . my/yas-try-expanding-auto-snippets))
+  :config
+  (use-package warnings
+    :config
+    (cl-pushnew '(yasnippet backquote-change)
+                warning-suppress-types
+                :test 'equal))
+
+  (setq yas-triggers-in-field t)
+  
+  ;; Function that tries to autoexpand YaSnippets
+  ;; The double quoting is NOT a typo!
+  (defun my/yas-try-expanding-auto-snippets ()
+    (when (and (boundp 'yas-minor-mode) yas-minor-mode)
+      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
+        (yas-expand)))))
+
+;; CDLatex integration with YaSnippet: Allow cdlatex tab to work inside Yas
+;; fields
+(use-package cdlatex
+  :hook ((cdlatex-tab . yas-expand)
+         (cdlatex-tab . cdlatex-in-yas-field))
+  :config
+  (use-package yasnippet
+    :bind (:map yas-keymap
+           ("<tab>" . yas-next-field-or-cdlatex)
+           ("TAB" . yas-next-field-or-cdlatex))
+    :config
+    (defun cdlatex-in-yas-field ()
+      ;; Check if we're at the end of the Yas field
+      (when-let* ((_ (overlayp yas--active-field-overlay))
+                  (end (overlay-end yas--active-field-overlay)))
+        (if (>= (point) end)
+            ;; Call yas-next-field if cdlatex can't expand here
+            (let ((s (thing-at-point 'sexp)))
+              (unless (and s (assoc (substring-no-properties s)
+                                    cdlatex-command-alist-comb))
+                (yas-next-field-or-maybe-expand)
+                t))
+          ;; otherwise expand and jump to the correct location
+          (let (cdlatex-tab-hook minp)
+            (setq minp
+                  (min (save-excursion (cdlatex-tab)
+                                       (point))
+                       (overlay-end yas--active-field-overlay)))
+            (goto-char minp) t))))
+
+    (defun yas-next-field-or-cdlatex nil
+      (interactive)
+      "Jump to the next Yas field correctly with cdlatex active."
+      (if
+          (or (bound-and-true-p cdlatex-mode)
+              (bound-and-true-p org-cdlatex-mode))
+          (cdlatex-tab)
+        (yas-next-field-or-maybe-expand)))))
+
+
+
+;; additional org-mode LaTeX improvements:
+
 (setq org-preview-latex-default-process 'dvisvgm)
+
+(setq org-latex-packages-alist '(("" "tikz")))
+
 (defun my/text-scale-adjust-latex-previews ()
   "Adjust the size of latex preview fragments when changing the
 buffer's text scale."
@@ -277,3 +421,5 @@ buffer's text scale."
 
 \[")))
             (org-latex-preview)))
+
+
