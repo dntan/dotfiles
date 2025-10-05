@@ -1,5 +1,5 @@
 ;; Dannys windows basic config
-;; UPDATE 4/10/25
+;; UPDATE 5/10/25
 
 ;; Set default zoom to 128
 
@@ -111,6 +111,8 @@
 (add-hook 'org-mode-hook 'org-indent-mode)
 (use-package org-bullets)
 (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+(add-hook 'org-mode-hook #'yas-minor-mode)
+
 
 ;; Collapse headers
 (setq org-ellipsis " ▾")
@@ -138,9 +140,10 @@
      "8c7e832be864674c220f9a9361c851917a93f921fedb7717b1b5ece47690c098"
      default))
  '(package-selected-packages
-   '(auctex cdlatex company-box doom-themes geiser-racket lsp-ui magit
-	    org-bullets org-roam org-table preview racket-mode
-	    rainbow-delimiters sicp smartparens yasnippet-snippets)))
+   '(cdlatex company-auctex company-box company-math doom-themes
+	     geiser-racket laas lsp-ui magit org-bullets org-roam
+	     racket-mode rainbow-delimiters sicp smartparens
+	     yasnippet-snippets)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -227,20 +230,30 @@
 ;; Following advice from emacs elements I'm going to try out company mode first...
 
 (use-package company
-    :ensure t
-    :hook ((prog-mode . company-mode))
-    :bind (:map company-active-map
-                ("<return>" . nil)
-                ("RET" . nil)
-                ("C-<return>" . company-complete-selection)
-                ([tab] . company-complete-selection)
-                ("TAB" . company-complete-selection)))
+  :ensure t
+  :hook ((prog-mode . company-mode)
+         (org-mode  . company-mode)
+         (LaTeX-mode . company-mode))   ;; enable in LaTeX buffers too
+  :bind (:map company-active-map
+              ("<return>" . nil)
+              ("RET" . nil)
+              ("C-<return>" . company-complete-selection)
+              ([tab] . company-complete-selection)
+              ("TAB" . company-complete-selection)))
+
+;; LaTeX completions in tex files via AUCTeX
+(use-package company-auctex
+  :after (company tex)
+  :config
+  (company-auctex-init))
+
+;; company-box is the visual popup for completions
   (use-package company-box
     :ensure t
     :hook (company-mode . company-box-mode))
 (add-hook 'after-init-hook 'global-company-mode)
-(setq company-idle-delay 0.2)
-(setq company-minimum-prefix-length 1)
+(setq company-idle-delay 0.1)
+(setq company-minimum-prefix-length 3)
 (setq company-tooltip-align-annotations t)
 
 ;; ;; Language support:
@@ -282,135 +295,122 @@
          (geiser-repl-mode . rainbow-delimiters-mode)))
 
 
-; A world of LaTeX with AUCTeX
+;; ================================
+;;  LaTeX + Org-mode Math Workflow
+;; ================================
 
-;; AucTeX settings - almost no changes
-(use-package latex
-  :ensure auctex
-  :hook ((LaTeX-mode . prettify-symbols-mode))
-  :bind (:map LaTeX-mode-map
-         ("C-S-e" . latex-math-from-calc))
-  :config
-  ;; Format math as a Latex string with Calc
-  (defun latex-math-from-calc ()
-    "Evaluate `calc' on the contents of line at point."
-    (interactive)
-    (cond ((region-active-p)
-           (let* ((beg (region-beginning))
-                  (end (region-end))
-                  (string (buffer-substring-no-properties beg end)))
-             (kill-region beg end)
-             (insert (calc-eval `(,string calc-language latex
-                                          calc-prefer-frac t
-                                          calc-angle-mode rad)))))
-          (t (let ((l (thing-at-point 'line)))
-               (end-of-line 1) (kill-line 0) 
-               (insert (calc-eval `(,l
-                                    calc-language latex
-                                    calc-prefer-frac t
-                                    calc-angle-mode rad))))))))
+;; --- AUCTeX ---
+;; AUCTeX setup without calc integration
+(use-package auctex
+  :ensure t
+  :hook ((LaTeX-mode . prettify-symbols-mode)))
 
-;; CDLatex settings
+;; --- CDLaTeX ---
 (use-package cdlatex
   :ensure t
-  :hook (LaTeX-mode . turn-on-cdlatex)
-  :bind (:map cdlatex-mode-map 
+  :hook ((LaTeX-mode . turn-on-cdlatex)
+         (org-mode   . turn-on-org-cdlatex))
+  :bind (:map cdlatex-mode-map
               ("<tab>" . cdlatex-tab)))
 
-;; Yasnippet settings
+;; --- YASnippet ---
 (use-package yasnippet
   :ensure t
   :hook ((LaTeX-mode . yas-minor-mode)
+         (org-mode   . yas-minor-mode)
          (post-self-insert . my/yas-try-expanding-auto-snippets))
   :config
-  (use-package warnings
-    :config
-    (cl-pushnew '(yasnippet backquote-change)
-                warning-suppress-types
-                :test 'equal))
-
   (setq yas-triggers-in-field t)
-  
-  ;; Function that tries to autoexpand YaSnippets
-  ;; The double quoting is NOT a typo!
+
+  ;; Auto-expand snippets when possible
   (defun my/yas-try-expanding-auto-snippets ()
+    "Auto-expand snippets when possible."
     (when (and (boundp 'yas-minor-mode) yas-minor-mode)
-      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
-        (yas-expand)))))
+      (let ((yas-buffer-local-condition
+             '(require-snippet-condition . auto)))
+        (yas-expand))))
 
-;; CDLatex integration with YaSnippet: Allow cdlatex tab to work inside Yas
-;; fields
-(use-package cdlatex
-  :hook ((cdlatex-tab . yas-expand)
-         (cdlatex-tab . cdlatex-in-yas-field))
-  :config
-  (use-package yasnippet
-    :bind (:map yas-keymap
-           ("<tab>" . yas-next-field-or-cdlatex)
-           ("TAB" . yas-next-field-or-cdlatex))
-    :config
-    (defun cdlatex-in-yas-field ()
-      ;; Check if we're at the end of the Yas field
-      (when-let* ((_ (overlayp yas--active-field-overlay))
-                  (end (overlay-end yas--active-field-overlay)))
-        (if (>= (point) end)
-            ;; Call yas-next-field if cdlatex can't expand here
-            (let ((s (thing-at-point 'sexp)))
-              (unless (and s (assoc (substring-no-properties s)
-                                    cdlatex-command-alist-comb))
-                (yas-next-field-or-maybe-expand)
-                t))
-          ;; otherwise expand and jump to the correct location
-          (let (cdlatex-tab-hook minp)
-            (setq minp
-                  (min (save-excursion (cdlatex-tab)
-                                       (point))
-                       (overlay-end yas--active-field-overlay)))
-            (goto-char minp) t))))
+  ;; TAB integration between Yasnippet, CDLaTeX, and Company
+  (bind-keys :map yas-keymap
+             ("<tab>"     . yas-next-field-or-cdlatex-or-company)
+             ("TAB"       . yas-next-field-or-cdlatex-or-company)
+             ("<backtab>" . yas-prev-field)) ;; Shift-TAB to go backward
 
-    (defun yas-next-field-or-cdlatex nil
-      (interactive)
-      "Jump to the next Yas field correctly with cdlatex active."
-      (if
-          (or (bound-and-true-p cdlatex-mode)
-              (bound-and-true-p org-cdlatex-mode))
-          (cdlatex-tab)
-        (yas-next-field-or-maybe-expand)))))
+  ;; Allow cdlatex-tab to work inside Yas fields
+  (defun cdlatex-in-yas-field ()
+    "Allow `cdlatex-tab` to work inside Yas fields."
+    (when-let* ((_   (overlayp yas--active-field-overlay))
+                (end (overlay-end yas--active-field-overlay)))
+      (if (>= (point) end)
+          (let ((s (thing-at-point 'sexp)))
+            (unless (and s (assoc (substring-no-properties s)
+                                  cdlatex-command-alist-comb))
+              (yas-next-field-or-maybe-expand)
+              t))
+        (let (cdlatex-tab-hook minp)
+          (setq minp (min (save-excursion
+                            (cdlatex-tab)
+                            (point))
+                          (overlay-end yas--active-field-overlay)))
+          (goto-char minp)
+          t))))
+
+  ;; Smart TAB dispatcher
+  (defun yas-next-field-or-cdlatex-or-company ()
+    "Smart TAB: prefer Yas fields, then CDLaTeX, then Company."
+    (interactive)
+    (cond
+     ;; 1. If inside a yasnippet field, jump forward
+     ((and (boundp 'yas-minor-mode) yas-minor-mode
+           (overlayp yas--active-field-overlay))
+      (yas-next-field-or-maybe-expand))
+
+     ;; 2. If CDLaTeX is active and can expand
+     ((and (bound-and-true-p cdlatex-mode)
+           (cdlatex-in-yas-field)))
+
+     ;; 3. Otherwise, trigger Company completion manually
+     ((and (boundp 'company-mode) company-mode
+           (company-manual-begin))
+      t)
+
+     ;; 4. Fallback: just indent
+     (t (indent-for-tab-command)))))
 
 
+;; --- Org-mode LaTeX Preview Scaling ---
 
-;; additional org-mode LaTeX improvements:
+;; Making previewing latex in org easier! rather than C-c C-x C-l
+(with-eval-after-load 'org
+  (define-key org-mode-map (kbd "C-;") #'org-latex-preview))
 
 (setq org-preview-latex-default-process 'dvisvgm)
 
 (setq org-latex-packages-alist '(("" "tikz")))
 
 (defun my/text-scale-adjust-latex-previews ()
-  "Adjust the size of latex preview fragments when changing the
-buffer's text scale."
+  "Adjust LaTeX preview size when text is scaled."
   (pcase major-mode
     ('latex-mode
      (dolist (ov (overlays-in (point-min) (point-max)))
-       (if (eq (overlay-get ov 'category)
-               'preview-overlay)
-           (my/text-scale--resize-fragment ov))))
+       (when (eq (overlay-get ov 'category) 'preview-overlay)
+         (my/text-scale--resize-fragment ov))))
     ('org-mode
      (dolist (ov (overlays-in (point-min) (point-max)))
-       (if (eq (overlay-get ov 'org-overlay-type)
-               'org-latex-overlay)
-           (my/text-scale--resize-fragment ov))))))
+       (when (eq (overlay-get ov 'org-overlay-type) 'org-latex-overlay)
+         (my/text-scale--resize-fragment ov))))))
 
 (defun my/text-scale--resize-fragment (ov)
-  (overlay-put
-   ov 'display
-   (cons 'image
-         (plist-put
-          (cdr (overlay-get ov 'display))
-          :scale (+ 1.0 (* 0.25 text-scale-mode-amount))))))
+  (let* ((img-props (cdr (overlay-get ov 'display)))
+         (base-scale (or (plist-get img-props :scale) 1.0)))
+    (overlay-put
+     ov 'display
+     (cons 'image
+           (plist-put img-props
+                      :scale (* base-scale
+                                (+ 1.0 (* 0.25 text-scale-mode-amount))))))))
 
 (add-hook 'text-scale-mode-hook #'my/text-scale-adjust-latex-previews)
-
-;; LaTeX fragments in org files: Make them large.
 
 (add-hook 'org-mode-hook
           (lambda ()
@@ -419,7 +419,6 @@ buffer's text scale."
                     :html-foreground "Black" :html-background "Transparent"
                     :html-scale 1.0 :matchers ("begin" "$1" "$" "$$" "\\(" "\
 
-\[")))
-            (org-latex-preview)))
+\[")))))
 
 
